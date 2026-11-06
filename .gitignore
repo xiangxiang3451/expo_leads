@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+*.py[cod]
+
+.idea/
+.DS_Store
+
+# 本地配置，包含 Telegram Bot Token
+.env
+
+# 本地 SQLite 数据库
+/data/*
+!/data/.gitkeep
