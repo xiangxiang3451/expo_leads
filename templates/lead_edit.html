@@ -1,10 +1,43 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Title</title>
-</head>
-<body>
+{% extends "base.html" %}
+{% block title %}编辑客户线索 · 展会客户跟进台{% endblock %}
 
-</body>
-</html>
+{% block content %}
+<a class="back-link" href="{{ url_for('leads_page') }}">← 返回客户线索</a>
+<h1>编辑客户线索</h1>
+<p class="intro">{{ lead.company }} · {{ lead.contact }}</p>
+
+<form class="card edit-form">
+    <div class="form-grid">
+        <label>
+            公司名称
+            <input type="text" name="company" value="{{ lead.company }}" required>
+        </label>
+
+        <label>
+            联系人
+            <input type="text" name="contact" value="{{ lead.contact }}" required>
+        </label>
+    </div>
+
+    <label>
+        产品需求
+        <textarea name="product" rows="4" required>{{ lead.product }}</textarea>
+    </label>
+
+    <label>
+        跟进状态
+        <select name="status">
+            {% for value, label in status_labels.items() %}
+                <option value="{{ value }}"{% if value == lead.status %} selected{% endif %}>
+                    {{ label }}
+                </option>
+            {% endfor %}
+        </select>
+    </label>
+
+    <div class="form-actions">
+        <button class="button" type="submit" disabled>保存修改</button>
+        <a href="{{ url_for('leads_page') }}">取消</a>
+    </div>
+</form>
+{% endblock %}

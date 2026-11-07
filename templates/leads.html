@@ -1,10 +1,81 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Title</title>
-</head>
-<body>
+{% extends "base.html" %}
 
-</body>
-</html>
+{% block title %}客户线索 · 展会客户跟进台{% endblock %}
+
+{% block content %}
+<header>
+    <p class="eyebrow">展会客户管理</p>
+    <h1>客户线索</h1>
+    <p class="intro">查看客户的产品需求，跟进联系与报价进度。</p>
+</header>
+
+<dl class="metrics">
+    <div class="metric metric-total">
+        <dt>全部线索</dt>
+        <dd>{{ leads | length }}</dd>
+    </div>
+
+    {% for value, label in status_labels.items() %}
+        {% set matching_leads = leads.values() | selectattr('status', 'equalto', value) | list %}
+        <div class="metric metric-{{ value }}">
+            <dt>{{ label }}</dt>
+            <dd>{{ matching_leads | length }}</dd>
+        </div>
+    {% endfor %}
+</dl>
+
+<section class="card" aria-label="客户线索列表">
+    <form class="filters">
+        <label>
+            搜索产品
+            <input type="search" name="q" placeholder="例如：耐油橡胶密封圈">
+        </label>
+
+        <label>
+            跟进状态
+            <select name="status">
+                <option value="">全部状态</option>
+                {% for value, label in status_labels.items() %}
+                    <option value="{{ value }}">{{ label }}</option>
+                {% endfor %}
+            </select>
+        </label>
+
+        <button class="button" type="submit" disabled>查询</button>
+    </form>
+
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th scope="col">公司</th>
+                    <th scope="col">联系人</th>
+                    <th scope="col">产品需求</th>
+                    <th scope="col">跟进状态</th>
+                    <th scope="col">操作</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for lead_id, lead in leads.items() %}
+                    <tr>
+                        <td>{{ lead.company }}</td>
+                        <td>{{ lead.contact }}</td>
+                        <td>{{ lead.product }}</td>
+                        <td>
+                            <span class="status status-{{ lead.status }}">
+                                {{ status_labels[lead.status] }}
+                            </span>
+                        </td>
+                        <td>
+                            <a href="{{ url_for('edit_lead_page', lead_id=lead_id) }}">
+                                编辑
+                            </a>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endblock %}
