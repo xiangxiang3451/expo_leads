@@ -1,34 +1,74 @@
 {% extends "base.html" %}
-{% block title %}编辑客户线索 · 展会客户跟进台{% endblock %}
+
+{% block title %}{{ title }} · 展会客户跟进台{% endblock %}
 
 {% block content %}
-<a class="back-link" href="{{ url_for('leads_page') }}">← 返回客户线索</a>
-<h1>编辑客户线索</h1>
-<p class="intro">{{ lead.company }} · {{ lead.contact }}</p>
+<a class="back-link" href="{{ url_for('leads_page') }}">
+    ← 返回客户线索
+</a>
 
-<form class="card edit-form">
+<h1>{{ title }}</h1>
+<p class="intro">填写客户信息与产品需求，选择当前跟进状态。</p>
+
+{% if errors %}
+    <div class="alert alert-error" role="alert">
+        <ul>
+            {% for error in errors %}
+                <li>{{ error }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+{% endif %}
+
+<form class="card edit-form" method="post">
+    <input
+        type="hidden"
+        name="csrf_token"
+        value="{{ csrf_token() }}"
+    >
+
     <div class="form-grid">
         <label>
             公司名称
-            <input type="text" name="company" value="{{ lead.company }}" required>
+            <input
+                type="text"
+                name="company"
+                value="{{ lead.company }}"
+                maxlength="200"
+                required
+            >
         </label>
 
         <label>
             联系人
-            <input type="text" name="contact" value="{{ lead.contact }}" required>
+            <input
+                type="text"
+                name="contact"
+                value="{{ lead.contact }}"
+                maxlength="200"
+                required
+            >
         </label>
     </div>
 
     <label>
         产品需求
-        <textarea name="product" rows="4" required>{{ lead.product }}</textarea>
+        <textarea
+            name="product"
+            rows="5"
+            maxlength="2000"
+            required
+        >{{ lead.product }}</textarea>
     </label>
 
     <label>
         跟进状态
-        <select name="status">
+        <select name="status" required>
             {% for value, label in status_labels.items() %}
-                <option value="{{ value }}"{% if value == lead.status %} selected{% endif %}>
+                <option
+                    value="{{ value }}"
+                    {% if value == lead.status %}selected{% endif %}
+                >
                     {{ label }}
                 </option>
             {% endfor %}
@@ -36,7 +76,7 @@
     </label>
 
     <div class="form-actions">
-        <button class="button" type="submit" disabled>保存修改</button>
+        <button class="button" type="submit">保存</button>
         <a href="{{ url_for('leads_page') }}">取消</a>
     </div>
 </form>

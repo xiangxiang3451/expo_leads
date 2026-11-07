@@ -4,23 +4,29 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}展会客户跟进台{% endblock %}</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='style.css') }}"
+    >
 </head>
 <body>
-    {% set status_labels = {
-        'pending': '待联系',
-        'contacted': '已联系',
-        'quoted': '已报价'
-    } %}
-
     <header class="topbar">
         <nav class="container nav" aria-label="主导航">
-            <a class="brand" href="{{ url_for('leads_page') }}">展会客户跟进台</a>
-            <span class="preview-label">本地预览</span>
+            <a class="brand" href="{{ url_for('leads_page') }}">
+                展会客户跟进台
+            </a>
+            <span class="preview-label">客户管理</span>
         </nav>
     </header>
 
     <main class="container page">
+        {% for category, message in get_flashed_messages(with_categories=true) %}
+            <div class="alert alert-{{ category }}" role="status">
+                {{ message }}
+            </div>
+        {% endfor %}
+
         {% block content %}{% endblock %}
     </main>
 </body>
