@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 # 四个录入阶段。
 COMPANY, CONTACT, PRODUCT, CONFIRM = range(4)
 
-# 处理私聊中的消息。
+# 处理私聊中的文字消息。
 PRIVATE = filters.ChatType.PRIVATE
 TEXT = PRIVATE & filters.TEXT & ~filters.COMMAND
 
@@ -55,31 +55,17 @@ def save_lead(lead):
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """显示使用说明和当前用户 ID。"""
+    """显示使用说明。"""
     await update.message.reply_text(
         "欢迎使用展会客户跟进助手。\n\n"
         "/new 新增客户线索\n"
         "/cancel 取消当前录入\n"
-        "/help 查看使用说明\n\n"
-        f"你的 Telegram 用户 ID 是 {update.effective_user.id}。"
+        "/help 查看使用说明"
     )
 
 
 async def begin_lead(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """检查账号权限，然后开始录入。"""
-    owner_id = context.bot_data["allowed_user_id"]
-
-    if owner_id is None:
-        await update.message.reply_text(
-            "请先在 .env 中填写下面这一项，然后重启 Bot。\n\n"
-            f"TELEGRAM_ALLOWED_USER_ID={update.effective_user.id}"
-        )
-        return ConversationHandler.END
-
-    if update.effective_user.id != owner_id:
-        await update.message.reply_text("当前账号没有录入权限。")
-        return ConversationHandler.END
-
+    """为当前用户创建草稿，开始录入。"""
     context.user_data["lead_draft"] = {}
 
     await update.message.reply_text(
@@ -87,6 +73,7 @@ async def begin_lead(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "随时发送 /cancel 可以取消。",
         reply_markup=ReplyKeyboardRemove(),
     )
+
     return COMPANY
 
 
@@ -121,6 +108,7 @@ async def receive_company(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "请发送联系人，最多 200 个字符。"
     )
+
     return CONTACT
 
 
@@ -136,6 +124,7 @@ async def receive_contact(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "请发送产品需求，最多 2000 个字符。"
     )
+
     return PRODUCT
 
 
@@ -166,6 +155,7 @@ async def receive_product(update: Update, context: ContextTypes.DEFAULT_TYPE):
             one_time_keyboard=True,
         ),
     )
+
     return CONFIRM
 
 
@@ -211,11 +201,12 @@ async def confirm_lead(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
     context.user_data.pop("lead_draft", None)
+
     return ConversationHandler.END
 
 
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """取消当前录入并清理草稿。"""
+    """结束当前用户的录入，清理对应草稿。"""
     lead = context.user_data.pop("lead_draft", {})
 
     if lead.get("saved_id") is not None:
@@ -230,6 +221,7 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
         text,
         reply_markup=ReplyKeyboardRemove(),
     )
+
     return ConversationHandler.END
 
 
@@ -245,7 +237,7 @@ async def set_commands(application):
     """设置 Telegram 中的命令菜单。"""
     await application.bot.set_my_commands(
         [
-            BotCommand("start", "查看说明和用户 ID"),
+            BotCommand("start", "查看使用说明"),
             BotCommand("new", "新增客户线索"),
             BotCommand("cancel", "取消当前录入"),
             BotCommand("help", "查看使用说明"),
@@ -270,7 +262,7 @@ async def on_error(update, context):
             logger.warning("暂时无法向 Telegram 回复消息")
 
 
-def build_application(token, allowed_user_id):
+def build_application(token):
     """创建 Bot 并注册命令和对话流程。"""
     application = (
         Application.builder()
@@ -279,8 +271,6 @@ def build_application(token, allowed_user_id):
         .post_init(set_commands)
         .build()
     )
-
-    application.bot_data["allowed_user_id"] = allowed_user_id
 
     conversation = ConversationHandler(
         entry_points=[
@@ -310,16 +300,28 @@ def build_application(token, allowed_user_id):
             MessageHandler(PRIVATE, reminder),
         ],
         allow_reentry=True,
+        per_chat=True,
+        per_user=True,
     )
 
     application.add_handler(conversation)
 
     application.add_handler(
-        CommandHandler(["start", "help"], start, filters=PRIVATE)
+        CommandHandler(
+            ["start", "help"],
+            start,
+            filters=PRIVATE,
+        )
     )
+
     application.add_handler(
-        CommandHandler("cancel", cancel, filters=PRIVATE)
+        CommandHandler(
+            "cancel",
+            cancel,
+            filters=PRIVATE,
+        )
     )
+
     application.add_handler(
         MessageHandler(PRIVATE, reminder)
     )
@@ -337,20 +339,6 @@ def main():
             "请在 .env 中设置 TELEGRAM_BOT_TOKEN。"
         )
 
-    owner_text = os.getenv(
-        "TELEGRAM_ALLOWED_USER_ID",
-        "",
-    ).strip()
-
-    if owner_text and (
-        not owner_text.isdecimal() or int(owner_text) <= 0
-    ):
-        raise RuntimeError(
-            "TELEGRAM_ALLOWED_USER_ID 应填写正整数用户 ID。"
-        )
-
-    owner_id = int(owner_text) if owner_text else None
-
     # 启动前检查数据库是否已经初始化。
     try:
         with flask_app.app_context():
@@ -367,7 +355,7 @@ def main():
             "初始化数据库。"
         ) from error
 
-    application = build_application(token, owner_id)
+    application = build_application(token)
 
     logger.info(
         "Bot 启动，数据库为 %s",
